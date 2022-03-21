@@ -175,7 +175,7 @@ if __name__ == "__main__":
 	if rank == 0:
 		allRes = []
 		for i in range(args.i):
-			if % args.n != 0:
+			if i % args.n != 0:
 				req = comm.irecv(source=i%args.n, tag=0)
 				allRes.append(req.wait())
 			else:
@@ -191,3 +191,4 @@ if __name__ == "__main__":
 	if rank == 0:
 		endTime = time.time()
 		print("Ran for " + str(endTime - startTime) + " seconds")
+
