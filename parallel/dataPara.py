@@ -147,9 +147,9 @@ if __name__ == "__main__":
 	if rank == 0:
 		for i in range(args.i):
 			if i % args.n == 0:
-				data.append(test[i])
+				data.append(test[i%len(test)])
 			else:
-				req = comm.isend(i, dest=i%args.n, tag=0)
+				req = comm.isend(test[i%len(test)], dest=i%args.n, tag=0)
 				req.wait()
 	else:
 		numResp = int(args.i/args.n)
