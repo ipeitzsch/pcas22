@@ -65,6 +65,13 @@ class Net(nn.Module):
         x = self.fc(x)
         return x
 
+def sublistFromDataclass(d, s, end):
+	lst = []
+	for i in range(s, end):
+		lst.append(d[i])
+
+	return lst
+
 if __name__ == "__main__":
 	# Arg parser
 	parser = argparse.ArgumentParser(description='Run neural network using data parallel on multiple GPUs')
@@ -94,6 +101,11 @@ if __name__ == "__main__":
 	test = DataClass(split='test', transform=data_transform, download=True)
 	#train = data.DataLoader(dataset=train, batch_size=128, shuffle=True)
 	#test = data.DataLoader(dataset=test, batch_size=256, shuffle=False)
+
+	# Create larger dataset, if necessary
+	while args.i > len(test):
+		# Makes a list longer than needed, but doesn't matter
+		test = test + test
 
 	model = Net(in_channels=n_channels, num_classes=n_classes)
 
@@ -135,21 +147,23 @@ if __name__ == "__main__":
 		startTime = time.time()
 
 	# Now, distribute images
-	myData = []
 	if rank == 0:
-		for i in range(args.i):
-			if i % args.n == 0:
-				myData.append(test[i%len(test)])
-			else:
-				req = comm.isend(test[i%len(test)], dest=i%args.n, tag=0)
-				req.wait()
+		inc = int(args.i/args.n)
+		mod = args.i%args.n
+		start = 0
+		nxt = inc
+		if mod > 0:
+			nxt = nxt + 1
+		myData = sublistFromDataclass(test, start, nxt)
+		start = nxt
+		for i in range(1,args.n):
+			nxt = start + inc
+			if mod > i:
+				nxt += 1
+			comm.send(sublistFromDataclass(test, start, nxt), dest=i, tag=0)
+			start = nxt
 	else:
-		numResp = int(args.i/args.n)
-		if rank < args.i%args.n:
-			numResp += 1
-		for i in range(numResp):
-			req = comm.irecv(source=0, tag=0)
-			myData.append(req.wait())
+		myData = comm.recv(source=0, tag=0)
 
 	# Inference time
 	res = []
@@ -168,25 +182,21 @@ if __name__ == "__main__":
 				res.append(model(inputs.cuda()).softmax(dim=-1))
 			else:
 				res.append(model(inputs).softmax(dim=-1))
-	
+
 	# Recover all inferences at root
 	count = 0
 	if rank == 0:
-		allRes = []
-		for i in range(args.i):
-			if i % args.n != 0:
-				req = comm.irecv(source=i%args.n, tag=0)
-				allRes.append(req.wait())
-			else:
-				allRes.append(res[int(count/batchSize)][count%batchSize])
-				count += 1
+		allRes = res
+		for i in range(1,args.n):
+			allRes += comm.recv(source=i, tag=0)
 		
 		# What to do once all data has been collected?
+		resList = []
+		for i in allRes:
+			resList += i
 	else:
-		for i in res:
-			for j in i:
-				req = comm.isend(i, dest=0, tag=0)
-	
+		comm.send(res, dest=0, tag=0)
+
 	# Timing
 	if rank == 0:
 		endTime = time.time()

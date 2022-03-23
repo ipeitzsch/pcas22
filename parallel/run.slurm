@@ -2,11 +2,11 @@
 
 #SBATCH --job-name=DataParallel
 #SBATCH --output=output
-#SBATCH --nodes=1
+#SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1
 #SBATCH --cluster=gpu
 #SBATCH --partition=gtx1080
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:4
 #SBATCH --account=ece2166_2022s
 
 module purge
@@ -19,4 +19,6 @@ pip install --user medmnist
 pip install --user numba
 pip install --user mpi4py
 
-mpirun -n 1 python dataPara.py -f model.pt -i 114880 -g
+NUM=4
+
+mpirun -n $NUM python dataPara.py -f model.pt -i 229760 -g --num $NUM
