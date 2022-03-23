@@ -12,10 +12,11 @@
 module purge
 module load python/3.7.0
 module load cuda/11.6.1
+module load gcc/5.4.0
 module load openmpi/3.0.0
 
 pip install --user medmnist
 pip install --user numba
 pip install --user mpi4py
 
-srun python dataPara.py
+mpirun -n 1 python dataPara.py -f model.pt -i 114880 -g

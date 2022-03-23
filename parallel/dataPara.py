@@ -13,9 +13,6 @@ import time
 import medmnist
 from medmnist import INFO, Evaluator
 
-# CUDA
-from numba import jit
-
 # MPI
 from mpi4py import MPI
 
@@ -72,8 +69,8 @@ if __name__ == "__main__":
 	# Arg parser
 	parser = argparse.ArgumentParser(description='Run neural network using data parallel on multiple GPUs')
 	parser.add_argument('-f', dest='f', help='File containing description of neural network')
-	parser.add_argument('--num', dest='n', type=int, help='Number of nodes to use')
-	parser.add_argument('-i', dest='i', type=int, help='Number of test images')
+	parser.add_argument('--num', dest='n', type=int, help='Number of nodes to use', default=1)
+	parser.add_argument('-i', dest='i', type=int, help='Number of test images', default=7180)
 	parser.add_argument('-g', dest='g', action='store_true', help='Use GPUs')
 	args = parser.parse_args()
 
@@ -95,8 +92,8 @@ if __name__ == "__main__":
 	# Get data
 	train = DataClass(split='train', transform=data_transform, download=True)
 	test = DataClass(split='test', transform=data_transform, download=True)
-	train = data.DataLoader(dataset=train, batch_size=128, shuffle=True)
-	test = data.DataLoader(dataset=test, batch_size=256, shuffle=False)
+	#train = data.DataLoader(dataset=train, batch_size=128, shuffle=True)
+	#test = data.DataLoader(dataset=test, batch_size=256, shuffle=False)
 
 	model = Net(in_channels=n_channels, num_classes=n_classes)
 
@@ -128,26 +125,21 @@ if __name__ == "__main__":
 				
 				loss.backward()
 				optimizer.step()
-		pVec = nn.utils.parameters_to_vector(model)
-		print(type(pVec))
+		torch.save(model, 'model.pt')
 	else:
-		pList = []
-		f = csv.reader(open(args.f, 'r'))[0]
-		for i in f:
-			pList.append(float(i))
-		pVec = np.array(pList)
-		nn.utils.vector_to_parameters(pVec, model)
-	
+		model = torch.load(args.f)
+		torch.save(model, 'model.pt')
+
 	# Start timer
 	if rank == 0:
 		startTime = time.time()
 
 	# Now, distribute images
-	data = []
+	myData = []
 	if rank == 0:
 		for i in range(args.i):
 			if i % args.n == 0:
-				data.append(test[i%len(test)])
+				myData.append(test[i%len(test)])
 			else:
 				req = comm.isend(test[i%len(test)], dest=i%args.n, tag=0)
 				req.wait()
@@ -157,18 +149,25 @@ if __name__ == "__main__":
 			numResp += 1
 		for i in range(numResp):
 			req = comm.irecv(source=0, tag=0)
-			data.append(req.wait())
+			myData.append(req.wait())
 
 	# Inference time
 	res = []
-	testLoad = data.DataLoader(data, batch_size=256, shuffle=False)
-	
+	batchSize = 256
+	testLoad = data.DataLoader(myData, batch_size=batchSize, shuffle=False)
+
 	with torch.no_grad():
+		if args.g:
+			if torch.cuda.is_available():
+				model = model.cuda()
+			else:
+				print("ERROR: Could not use CUDA")
+				quit()
 		for inputs, targets in testLoad:
 			if args.g:
-				res.append(jit(model(inputs)))
+				res.append(model(inputs.cuda()).softmax(dim=-1))
 			else:
-				res.append(model(inputs))
+				res.append(model(inputs).softmax(dim=-1))
 	
 	# Recover all inferences at root
 	count = 0
@@ -179,13 +178,14 @@ if __name__ == "__main__":
 				req = comm.irecv(source=i%args.n, tag=0)
 				allRes.append(req.wait())
 			else:
-				allRes.append(res[count])
+				allRes.append(res[int(count/batchSize)][count%batchSize])
 				count += 1
 		
 		# What to do once all data has been collected?
 	else:
 		for i in res:
-			req = comm.isend(i, dest=0, tag=0)
+			for j in i:
+				req = comm.isend(i, dest=0, tag=0)
 	
 	# Timing
 	if rank == 0:
