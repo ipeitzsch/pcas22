@@ -13,37 +13,34 @@ import time
 import medmnist
 from medmnist import INFO, Evaluator
 
-# MPI
-from mpi4py import MPI
-
 # Simple CNN model
 class Net(nn.Module):
     def __init__(self, in_channels, num_classes):
         super(Net, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels, 16, kernel_size=3),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(in_channels, 32, kernel_size=3),
+            nn.BatchNorm2d(32),
             nn.ReLU())
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 16, kernel_size=3),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(32, 128, kernel_size=3),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(16, 64, kernel_size=3),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(128, 512, kernel_size=3),
+            nn.BatchNorm2d(512),
             nn.ReLU())
         
         self.layer4 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(512, 512, kernel_size=3),
+            nn.BatchNorm2d(512),
             nn.ReLU())
-
+        
         self.layer5 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.Conv2d(512, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
@@ -76,13 +73,11 @@ if __name__ == "__main__":
 	# Arg parser
 	parser = argparse.ArgumentParser(description='Run neural network using data parallel on multiple GPUs')
 	parser.add_argument('-f', dest='f', help='File containing description of neural network')
-	parser.add_argument('--num', dest='n', type=int, help='Number of nodes to use', default=1)
 	parser.add_argument('-i', dest='i', type=int, help='Number of test images', default=7180)
-	parser.add_argument('-g', dest='g', action='store_true', help='Use GPUs')
+	parser.add_argument('-g', dest='g', type=int, help='How many GPUs to use', default=0)
+	parser.add_argument('-r', dest='r', type=int, help='Number of times to run', default=1)
+	parser.add_argument('-o', dest='o', help='Output file, will be overwritten')
 	args = parser.parse_args()
-
-	comm = MPI.COMM_WORLD
-	rank = comm.Get_rank()
 
 	# Get data
 	data_flag = 'pathmnist'
@@ -98,9 +93,8 @@ if __name__ == "__main__":
 	
 	# Get data
 	train = DataClass(split='train', transform=data_transform, download=True)
+	train = data.DataLoader(dataset=train, batch_size=128, shuffle=True)
 	test = DataClass(split='test', transform=data_transform, download=True)
-	#train = data.DataLoader(dataset=train, batch_size=128, shuffle=True)
-	#test = data.DataLoader(dataset=test, batch_size=256, shuffle=False)
 
 	# Create larger dataset, if necessary
 	while args.i > len(test):
@@ -111,6 +105,8 @@ if __name__ == "__main__":
 
 	# Train if no parameters provided
 	if type(args.f) == type(None):
+		model = model.cuda()
+		#train = train.cuda()
 		if task == "multi-label, binary-class":
 			criterion = nn.BCEWithLogitsLoss()
 		else:
@@ -126,79 +122,65 @@ if __name__ == "__main__":
 			for inputs, targets in tqdm(train):
 				#forward + backward + optimize
 				optimizer.zero_grad()
-				outputs = model(inputs)
+				outputs = model(inputs.cuda())
 				
 				if task == 'multi-label, binary-class':
 					targets = targets.to(torch.float32)
 					loss = criterion(outputs, targets)
 				else:
 					targets = targets.squeeze().long()
-					loss = criterion(outputs, targets)
+					loss = criterion(outputs, targets.cuda())
 				
 				loss.backward()
 				optimizer.step()
 		torch.save(model, 'model.pt')
 	else:
 		model = torch.load(args.f)
-		torch.save(model, 'model.pt')
 
-	# Start timer
-	if rank == 0:
+	times = []
+	for k in range(args.r):
 		startTime = time.time()
 
-	# Now, distribute images
-	if rank == 0:
-		inc = int(args.i/args.n)
-		mod = args.i%args.n
-		start = 0
-		nxt = inc
-		if mod > 0:
-			nxt = nxt + 1
-		myData = sublistFromDataclass(test, start, nxt)
-		start = nxt
-		for i in range(1,args.n):
-			nxt = start + inc
-			if mod > i:
-				nxt += 1
-			comm.send(sublistFromDataclass(test, start, nxt), dest=i, tag=0)
-			start = nxt
-	else:
-		myData = comm.recv(source=0, tag=0)
+		# Inference time
+		res = []
+		batchSize = 512
+		testLoad = data.DataLoader(test, batch_size=batchSize, shuffle=False)
 
-	# Inference time
-	res = []
-	batchSize = 256
-	testLoad = data.DataLoader(myData, batch_size=batchSize, shuffle=False)
-
-	with torch.no_grad():
-		if args.g:
-			if torch.cuda.is_available():
-				model = model.cuda()
-			else:
-				print("ERROR: Could not use CUDA")
-				quit()
-		for inputs, targets in testLoad:
-			if args.g:
+		with torch.no_grad():
+			if args.g > 0:
+				if torch.cuda.is_available():
+					if torch.cuda.device_count() >= args.g:
+						#numDevices = torch.cuda.device_count()
+						gpuStr = 'cuda'
+						devIds = []
+						for i in range(args.g):
+							#if i > 0:
+							#	gpuStr += ','
+							#gpuStr += str(i)
+							devIds.append(i)
+						device = torch.device(gpuStr)
+					model.to(device)
+					model = nn.DataParallel(model,device_ids = devIds)
+					#testLoad = testLoad.to(device)
+				else:
+					print("ERROR: Could not use CUDA")
+					quit()
+			for inputs, targets in testLoad:
 				res.append(model(inputs.cuda()).softmax(dim=-1))
-			else:
-				res.append(model(inputs).softmax(dim=-1))
 
-	# Recover all inferences at root
-	count = 0
-	if rank == 0:
-		allRes = res
-		for i in range(1,args.n):
-			allRes += comm.recv(source=i, tag=0)
-		
 		# What to do once all data has been collected?
 		resList = []
-		for i in allRes:
+		for i in res:
 			resList += i
-	else:
-		comm.send(res, dest=0, tag=0)
 
-	# Timing
-	if rank == 0:
+		# Timing
 		endTime = time.time()
-		print("Ran for " + str(endTime - startTime) + " seconds")
+		times.append(endTime-startTime)
 
+	f = open(args.o, "w")
+	counter = 1
+	for i in times:
+		f.write(str(counter) + ',' + str(i) + '\n')
+		counter += 1
+	f.write('Average,' + str(sum(times)/len(times)) + '\n')
+	f.close()
