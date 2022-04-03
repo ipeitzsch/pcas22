@@ -9,6 +9,8 @@ import torchvision.transforms as transforms
 import argparse
 import csv
 import time
+import threading
+import copy
 
 import medmnist
 from medmnist import INFO, Evaluator
@@ -19,28 +21,28 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels, 32, kernel_size=3),
-            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
             nn.ReLU())
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(32, 128, kernel_size=3),
-            nn.BatchNorm2d(128),
+            nn.Conv2d(64, 256, kernel_size=3),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(128, 512, kernel_size=3),
-            nn.BatchNorm2d(512),
+            nn.Conv2d(256, 1024, kernel_size=3),
+            nn.BatchNorm2d(1024),
             nn.ReLU())
         
         self.layer4 = nn.Sequential(
-            nn.Conv2d(512, 512, kernel_size=3),
-            nn.BatchNorm2d(512),
+            nn.Conv2d(1024, 1024, kernel_size=3),
+            nn.BatchNorm2d(1024),
             nn.ReLU())
         
         self.layer5 = nn.Sequential(
-            nn.Conv2d(512, 64, kernel_size=3, padding=1),
+            nn.Conv2d(1024, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
@@ -69,6 +71,17 @@ def sublistFromDataclass(d, s, end):
 
 	return lst
 
+def runTestNetwork(model, dev, testData, batchSize, results, start):
+	testLoad = data.DataLoader(testData, batch_size=batchSize, shuffle=False)
+	#print("Model: " + str(model.get_device()) + ", dev: " + str(dev))
+	#newModel = model.to(dev)
+	count = 0
+	with torch.no_grad():
+		for inputs, targets in testLoad:
+			inputs = inputs.to(dev)
+			results[start+count] = model(inputs).softmax(dim=-1)
+			count += 1
+
 if __name__ == "__main__":
 	# Arg parser
 	parser = argparse.ArgumentParser(description='Run neural network using data parallel on multiple GPUs')
@@ -93,7 +106,7 @@ if __name__ == "__main__":
 	
 	# Get data
 	train = DataClass(split='train', transform=data_transform, download=True)
-	train = data.DataLoader(dataset=train, batch_size=128, shuffle=True)
+	train = data.DataLoader(dataset=train, batch_size=128, shuffle=True, num_workers=4)
 	test = DataClass(split='test', transform=data_transform, download=True)
 
 	# Create larger dataset, if necessary
@@ -138,49 +151,81 @@ if __name__ == "__main__":
 		model = torch.load(args.f)
 
 	times = []
-	for k in range(args.r):
-		startTime = time.time()
+	with torch.no_grad():
+		if args.g > 0:
+			devList = []
+			modelList = []
+			if torch.cuda.is_available() and torch.cuda.device_count() == args.g:
+				#gpuStr = 'cuda'
+				#devIds = []
+				#for i in range(args.g):
+				#	devIds.append(i)
+				#model.to(torch.device('cuda'))
+				#model = nn.DataParallel(model,device_ids = devIds)
+				for i in range(args.g):
+					tempStr = "cuda:"+str(i)
+					devList.append(torch.device(tempStr))
+					modelList.append(copy.deepcopy(model).to(torch.device(tempStr)))
+				#model = model.cuda()
+			else:
+				print("ERROR: Could not use CUDA")
+				quit()
 
-		# Inference time
-		res = []
-		batchSize = 512
-		testLoad = data.DataLoader(test, batch_size=batchSize, shuffle=False)
-
-		with torch.no_grad():
-			if args.g > 0:
-				if torch.cuda.is_available():
-					if torch.cuda.device_count() >= args.g:
-						#numDevices = torch.cuda.device_count()
-						gpuStr = 'cuda'
-						devIds = []
-						for i in range(args.g):
-							#if i > 0:
-							#	gpuStr += ','
-							#gpuStr += str(i)
-							devIds.append(i)
-						device = torch.device(gpuStr)
-					model.to(device)
-					model = nn.DataParallel(model,device_ids = devIds)
-					#testLoad = testLoad.to(device)
-				else:
-					print("ERROR: Could not use CUDA")
-					quit()
-			for inputs, targets in testLoad:
-				res.append(model(inputs.cuda()).softmax(dim=-1))
-
-		# What to do once all data has been collected?
-		resList = []
-		for i in res:
-			resList += i
-
-		# Timing
-		endTime = time.time()
-		times.append(endTime-startTime)
-
+	bSizes = [32, 64, 128, 256, 512, 1024, 2048, 4096]
 	f = open(args.o, "w")
-	counter = 1
-	for i in times:
-		f.write(str(counter) + ',' + str(i) + '\n')
-		counter += 1
-	f.write('Average,' + str(sum(times)/len(times)) + '\n')
+	with torch.no_grad():
+		for k in bSizes:
+		#for k in range(args.r):
+			startTime = time.time()
+
+			# Inference time
+			res = []
+			batchSize = k
+			testList = []
+			startList = []
+			stepSize = len(test)/args.g
+			extra = len(test) % args.g
+			for i in range(args.g):
+				start = i*stepSize
+				if i > extra:
+					start += extra
+					end = start + stepSize
+				else:
+					start += i
+					end = start + stepSize + 1
+				startList.append(start)
+				testList.append(sublistFromDataclass(test, int(start), int(end-1)))
+
+			res = [0]*len(test)
+			threads = []
+			for i in range(args.g):
+				threads.append(threading.Thread(target=runTestNetwork, args=(modelList[i], devList[i], testList[i], batchSize, res, int(startList[i]))))
+				threads[-1].start()
+			for i in threads:
+				i.join()
+			#testLoad = data.DataLoader(test, batch_size=batchSize, shuffle=False)
+
+			#for inputs, targets in testLoad:
+			#	if args.g > 0:
+					# Putting data on GPU counts for time
+					#torch.cuda.empty_cache()
+			#		inputs = inputs.cuda()
+			#	res.append(model(inputs).softmax(dim=-1))
+
+			# What to do once all data has been collected?
+			#resList = []
+			#for i in res:
+			#	resList += i
+
+			# Timing
+			endTime = time.time()
+			times.append(endTime-startTime)
+			f.write("Batch size: " + str(k) + "," + str(times[-1]) + "\n")
+
+	#f = open(args.o, "w")
+	#counter = 1
+	#for i in times:
+	#	f.write(str(counter) + ',' + str(i) + '\n')
+	#	counter += 1
+	#f.write('Average,' + str(sum(times)/len(times)) + '\n')
 	f.close()
