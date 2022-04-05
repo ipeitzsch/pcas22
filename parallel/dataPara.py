@@ -73,8 +73,6 @@ def sublistFromDataclass(d, s, end):
 
 def runTestNetwork(model, dev, testData, batchSize, results, start):
 	testLoad = data.DataLoader(testData, batch_size=batchSize, shuffle=False)
-	#print("Model: " + str(model.get_device()) + ", dev: " + str(dev))
-	#newModel = model.to(dev)
 	count = 0
 	with torch.no_grad():
 		for inputs, targets in testLoad:
@@ -133,7 +131,6 @@ if __name__ == "__main__":
 			
 			model.train()
 			for inputs, targets in tqdm(train):
-				#forward + backward + optimize
 				optimizer.zero_grad()
 				outputs = model(inputs.cuda())
 				
@@ -156,26 +153,16 @@ if __name__ == "__main__":
 			devList = []
 			modelList = []
 			if torch.cuda.is_available() and torch.cuda.device_count() == args.g:
-				#gpuStr = 'cuda'
-				#devIds = []
-				#for i in range(args.g):
-				#	devIds.append(i)
-				#model.to(torch.device('cuda'))
-				#model = nn.DataParallel(model,device_ids = devIds)
 				for i in range(args.g):
 					tempStr = "cuda:"+str(i)
 					devList.append(torch.device(tempStr))
 					modelList.append(copy.deepcopy(model).to(torch.device(tempStr)))
-				#model = model.cuda()
 			else:
 				print("ERROR: Could not use CUDA")
 				quit()
 
-	bSizes = [32, 64, 128, 256, 512, 1024, 2048, 4096]
-	f = open(args.o, "w")
 	with torch.no_grad():
-		for k in bSizes:
-		#for k in range(args.r):
+		for k in range(args.r):
 			startTime = time.time()
 
 			# Inference time
@@ -203,29 +190,15 @@ if __name__ == "__main__":
 				threads[-1].start()
 			for i in threads:
 				i.join()
-			#testLoad = data.DataLoader(test, batch_size=batchSize, shuffle=False)
-
-			#for inputs, targets in testLoad:
-			#	if args.g > 0:
-					# Putting data on GPU counts for time
-					#torch.cuda.empty_cache()
-			#		inputs = inputs.cuda()
-			#	res.append(model(inputs).softmax(dim=-1))
-
-			# What to do once all data has been collected?
-			#resList = []
-			#for i in res:
-			#	resList += i
 
 			# Timing
 			endTime = time.time()
 			times.append(endTime-startTime)
-			f.write("Batch size: " + str(k) + "," + str(times[-1]) + "\n")
 
-	#f = open(args.o, "w")
-	#counter = 1
-	#for i in times:
-	#	f.write(str(counter) + ',' + str(i) + '\n')
-	#	counter += 1
-	#f.write('Average,' + str(sum(times)/len(times)) + '\n')
+	f = open(args.o, "w")
+	counter = 1
+	for i in times:
+		f.write(str(counter) + ',' + str(i) + '\n')
+		counter += 1
+	f.write('Average,' + str(sum(times)/len(times)) + '\n')
 	f.close()

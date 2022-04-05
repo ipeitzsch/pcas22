@@ -14,4 +14,4 @@ module load python/3.7.0
 module load cuda/11.6.1
 module load gcc/5.4.0
 
-python dataPara.py -f model.pt -i 229760 -g 4 -o fourGPU.csv -r 1
+python dataPara.py -f model.pt -i 229760 -g 4 -o fourGPU.csv -r 50
