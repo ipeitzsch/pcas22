@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
 			# Inference time
 			res = []
-			batchSize = k
+			batchSize = 2048
 			testList = []
 			startList = []
 			stepSize = len(test)/args.g

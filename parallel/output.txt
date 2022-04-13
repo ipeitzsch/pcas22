@@ -2,3 +2,13 @@ Warning: When compiling code please add the following flags to nvcc:
          -gencode arch=compute_35,code=[compute_35,sm_35] \
          -gencode arch=compute_61,code=[compute_61,sm_61] 
          -gencode arch=compute_70,code=[compute_70,sm_70] 
+Using downloaded and verified file: /ihome/ageorge/roe35/.medmnist/pathmnist.npz
+Using downloaded and verified file: /ihome/ageorge/roe35/.medmnist/pathmnist.npz
+Traceback (most recent call last):
+  File "dataPara.py", line 184, in <module>
+    testList.append(sublistFromDataclass(test, int(start), int(end-1)))
+  File "dataPara.py", line 70, in sublistFromDataclass
+    lst.append(d[i])
+  File "/ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages/torch/utils/data/dataset.py", line 207, in __getitem__
+    return self.datasets[dataset_idx][sample_idx]
+IndexError: list index out of range
