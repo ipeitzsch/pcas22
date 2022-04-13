@@ -170,7 +170,7 @@ if __name__ == "__main__":
 			batchSize = 2048
 			testList = []
 			startList = []
-			stepSize = len(test)/args.g
+			stepSize = int(len(test)/args.g)
 			extra = len(test) % args.g
 			for i in range(args.g):
 				start = i*stepSize
@@ -181,6 +181,8 @@ if __name__ == "__main__":
 					start += i
 					end = start + stepSize + 1
 				startList.append(start)
+				print("len(test): " + str(len(test)))
+				print("end: " + str(int(end)))
 				testList.append(sublistFromDataclass(test, int(start), int(end-1)))
 
 			res = [0]*len(test)
