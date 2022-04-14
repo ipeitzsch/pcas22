@@ -17,28 +17,28 @@ class Net(nn.Module):
         super(Net, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels, 16, kernel_size=3),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(in_channels, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
             nn.ReLU())
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 16, kernel_size=3),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(64, 256, kernel_size=3),
+            nn.BatchNorm2d(256),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(16, 64, kernel_size=3),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(256, 1024, kernel_size=3),
+            nn.BatchNorm2d(1024),
             nn.ReLU())
         
         self.layer4 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(1024, 1024, kernel_size=3),
+            nn.BatchNorm2d(1024),
             nn.ReLU())
-
+        
         self.layer5 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.Conv2d(1024, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2))
@@ -141,19 +141,28 @@ if __name__ == "__main__":
 	batchSize = 256
 	testLoad = data.DataLoader(test, batch_size=batchSize, shuffle=False)
 
+	model.eval()
+	y_true = torch.tensor([])
+	y_score = torch.tensor([])
+
 	with torch.no_grad():
-		if args.g:
-			if torch.cuda.is_available():
-				model = model.cuda()
-			else:
-				print("ERROR: Could not use CUDA")
-				quit()
 		for inputs, targets in testLoad:
-			if args.g:
-				res.append(model(inputs.cuda()).softmax(dim=-1))
-			else:
-				res.append(model(inputs).softmax(dim=-1))
+			res.append(model(inputs).softmax(dim=-1))
+
+			y_true = torch.cat((y_true, targets), 0)
+			y_score = torch.cat((y_score, outputs), 0)
+
+		y_true = y_true.numpy()
+		y_score = y_score.detach().numpy()
+
+		evaluator = Evaluator(data_flag, 'test')
+		metrics = evaluator.evaluate(y_score)
+
+		print('%s  auc: %.3f  acc:%.3f' % ('test', *metrics))
 
 	# Timing
 	endTime = time.time()
 	print("Ran for " + str(endTime - startTime) + " seconds")
+
+	file = open("serial-times.csv", "a")
+	file.write("{}\n".format(str(endTime - startTime)))
