@@ -17,4 +17,4 @@ module load gcc/5.4.0
 pip install --user medmnist
 #pip install --user numba
 
-python nn.py -i 229760 -g 4 -o fourGPULarge.csv -r 50
+python nn.py -i 229760 -g 4 -o fourGPUSingleSmall.csv -r 50

@@ -16,4 +16,4 @@ module load gcc/5.4.0
 pip install --user medmnist
 pip install --user numba
 
-python nn.py -i 229760 -g 2 -o twoGPULarge.csv -r 50
+python nn.py -i 229760 -g 2 -o twoGPUSingleSmall.csv -r 50

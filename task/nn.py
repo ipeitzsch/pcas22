@@ -28,28 +28,28 @@ class Net(nn.Module):
         self.gpus.sort()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(in_channels, 64, kernel_size=3),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels, 16, kernel_size=3),
+            nn.BatchNorm2d(16),
             nn.ReLU()).to(f'cuda:{self.gpus[0]}')
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(64, 256, kernel_size=3),
-            nn.BatchNorm2d(256),
+            nn.Conv2d(16, 16, kernel_size=3),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)).to(f'cuda:{self.gpus[1]}')
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(256, 1024, kernel_size=3),
-            nn.BatchNorm2d(1024),
+            nn.Conv2d(16, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
             nn.ReLU()).to(f'cuda:{self.gpus[2]}')
 
         self.layer4 = nn.Sequential(
-            nn.Conv2d(1024, 1024, kernel_size=3),
-            nn.BatchNorm2d(1024),
+            nn.Conv2d(64, 64, kernel_size=3),
+            nn.BatchNorm2d(64),
             nn.ReLU()).to(f'cuda:{self.gpus[3]}')
 
-        self.layer5 = self.layer5 = nn.Sequential(
-            nn.Conv2d(1024, 64, kernel_size=3, padding=1),
+        self.layer5 = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2)).to(f'cuda:{self.gpus[4]}')
@@ -65,7 +65,7 @@ class Net(nn.Module):
 
     def forward(self, x):
         prevs = [None] * 6
-        splits = iter(x.split(16, dim=0))
+        splits = iter(x.split(1, dim=0))
         sNext = next(splits)
         prevs[0] = sNext.to(f'cuda:{self.gpus[0]}')
         ret = []
