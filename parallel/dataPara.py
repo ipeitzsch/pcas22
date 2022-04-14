@@ -17,42 +17,42 @@ from medmnist import INFO, Evaluator
 
 # Simple CNN model
 class Net(nn.Module):
-    def __init__(self, in_channels, num_classes):
+    def __init__(self, in_channels, num_classes, gpuNum):
         super(Net, self).__init__()
 
         self.layer1 = nn.Sequential(
             nn.Conv2d(in_channels, 64, kernel_size=3),
             nn.BatchNorm2d(64),
-            nn.ReLU())
+            nn.ReLU()).to(gpuNum)
 
         self.layer2 = nn.Sequential(
             nn.Conv2d(64, 256, kernel_size=3),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
+            nn.MaxPool2d(kernel_size=2, stride=2)).to(gpuNum)
 
         self.layer3 = nn.Sequential(
             nn.Conv2d(256, 1024, kernel_size=3),
             nn.BatchNorm2d(1024),
-            nn.ReLU())
+            nn.ReLU()).to(gpuNum)
         
         self.layer4 = nn.Sequential(
             nn.Conv2d(1024, 1024, kernel_size=3),
             nn.BatchNorm2d(1024),
-            nn.ReLU())
+            nn.ReLU()).to(gpuNum)
         
         self.layer5 = nn.Sequential(
             nn.Conv2d(1024, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
+            nn.MaxPool2d(kernel_size=2, stride=2)).to(gpuNum)
 
         self.fc = nn.Sequential(
             nn.Linear(64 * 4 * 4, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, num_classes))
+            nn.Linear(128, num_classes)).to(gpuNum)
 
     def forward(self, x):
         x = self.layer1(x)
@@ -107,12 +107,19 @@ if __name__ == "__main__":
 	train = data.DataLoader(dataset=train, batch_size=128, shuffle=True, num_workers=4)
 	test = DataClass(split='test', transform=data_transform, download=True)
 
+	# Convert to list for easier division
+	temp = []
+	for i in test:
+		temp.append(i)
+	test = temp
+
 	# Create larger dataset, if necessary
 	while args.i > len(test):
 		# Makes a list longer than needed, but doesn't matter
 		test = test + test
 
-	model = Net(in_channels=n_channels, num_classes=n_classes)
+	"""
+	model = Net(in_channels=n_channels, num_classes=n_classes, numGPU=torch.cuda.device_count())
 
 	# Train if no parameters provided
 	if type(args.f) == type(None):
@@ -146,6 +153,7 @@ if __name__ == "__main__":
 		torch.save(model, 'model.pt')
 	else:
 		model = torch.load(args.f)
+	"""
 
 	times = []
 	with torch.no_grad():
@@ -156,21 +164,21 @@ if __name__ == "__main__":
 				for i in range(args.g):
 					tempStr = "cuda:"+str(i)
 					devList.append(torch.device(tempStr))
-					modelList.append(copy.deepcopy(model).to(torch.device(tempStr)))
+					modelList.append(Net(in_channels=n_channels, num_classes=n_classes, gpuNum=tempStr))
 			else:
 				print("ERROR: Could not use CUDA")
 				quit()
-
+	
 	with torch.no_grad():
 		for k in range(args.r):
 			startTime = time.time()
 
 			# Inference time
 			res = []
-			batchSize = k
+			batchSize = 2048
 			testList = []
 			startList = []
-			stepSize = len(test)/args.g
+			stepSize = int(len(test)/args.g)
 			extra = len(test) % args.g
 			for i in range(args.g):
 				start = i*stepSize
@@ -180,8 +188,8 @@ if __name__ == "__main__":
 				else:
 					start += i
 					end = start + stepSize + 1
-				startList.append(start)
-				testList.append(sublistFromDataclass(test, int(start), int(end-1)))
+				startList.append(int(start))
+				testList.append(test[int(start):int(end-1)])
 
 			res = [0]*len(test)
 			threads = []

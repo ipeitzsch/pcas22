@@ -1,0 +1,94 @@
+Warning: When compiling code please add the following flags to nvcc:
+         -gencode arch=compute_35,code=[compute_35,sm_35] \
+         -gencode arch=compute_61,code=[compute_61,sm_61] 
+         -gencode arch=compute_70,code=[compute_70,sm_70] 
+Requirement already satisfied: medmnist in /ihome/ece2166_2022s/iap20/.local/lib/python3.7/site-packages (2.0.2)
+Requirement already satisfied: scikit-learn in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (0.19.2)
+Requirement already satisfied: scikit-image in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (0.14.0)
+Requirement already satisfied: torch in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (1.6.0+cu101)
+Requirement already satisfied: numpy in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (1.15.4)
+Requirement already satisfied: tqdm in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (4.26.0)
+Requirement already satisfied: torchvision in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (0.7.0+cu101)
+Requirement already satisfied: Pillow in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (5.2.0)
+Requirement already satisfied: pandas in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from medmnist) (1.1.2)
+Requirement already satisfied: fire in /ihome/ece2166_2022s/iap20/.local/lib/python3.7/site-packages (from medmnist) (0.4.0)
+Requirement already satisfied: dask[array]>=0.9.0 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (0.19.1)
+Requirement already satisfied: networkx>=1.8 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (2.1)
+Requirement already satisfied: PyWavelets>=0.4.0 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (1.0.0)
+Requirement already satisfied: cloudpickle>=0.2.1 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (0.5.5)
+Requirement already satisfied: matplotlib>=2.0.0 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (2.2.3)
+Requirement already satisfied: six>=1.10.0 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (1.11.0)
+Requirement already satisfied: scipy>=0.17.0 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from scikit-image->medmnist) (1.1.0)
+Requirement already satisfied: future in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from torch->medmnist) (0.16.0)
+Requirement already satisfied: pytz>=2017.2 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from pandas->medmnist) (2018.5)
+Requirement already satisfied: python-dateutil>=2.7.3 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from pandas->medmnist) (2.7.3)
+Requirement already satisfied: termcolor in /ihome/ece2166_2022s/iap20/.local/lib/python3.7/site-packages (from fire->medmnist) (1.1.0)
+Requirement already satisfied: toolz>=0.7.3; extra == "array" in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from dask[array]>=0.9.0->scikit-image->medmnist) (0.9.0)
+Requirement already satisfied: decorator>=4.1.0 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from networkx>=1.8->scikit-image->medmnist) (4.3.0)
+Requirement already satisfied: pyparsing!=2.0.4,!=2.1.2,!=2.1.6,>=2.0.1 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from matplotlib>=2.0.0->scikit-image->medmnist) (2.2.0)
+Requirement already satisfied: kiwisolver>=1.0.1 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from matplotlib>=2.0.0->scikit-image->medmnist) (1.0.1)
+Requirement already satisfied: cycler>=0.10 in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from matplotlib>=2.0.0->scikit-image->medmnist) (0.10.0)
+Requirement already satisfied: setuptools in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from kiwisolver>=1.0.1->matplotlib>=2.0.0->scikit-image->medmnist) (50.3.0)
+You are using pip version 18.0, however version 22.0.4 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
+Collecting numba
+Collecting numpy<1.22,>=1.18 (from numba)
+  Downloading https://files.pythonhosted.org/packages/45/b7/de7b8e67f2232c26af57c205aaad29fe17754f793404f59c8a730c7a191a/numpy-1.21.6.zip (10.3MB)
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+Collecting llvmlite<0.39,>=0.38.0rc1 (from numba)
+  Using cached https://files.pythonhosted.org/packages/d8/e3/bd329a96549809598acd5daaccd35fd9d0883185cfe7f681a9e3e54beaa0/llvmlite-0.38.0.tar.gz
+Requirement already satisfied: setuptools in /ihome/crc/install/python/miniconda3-3.7/lib/python3.7/site-packages (from numba) (50.3.0)
+Building wheels for collected packages: numpy, llvmlite
+  Running setup.py bdist_wheel for numpy: started
+  Running setup.py bdist_wheel for numpy: still running...
+  Running setup.py bdist_wheel for numpy: still running...
+  Running setup.py bdist_wheel for numpy: still running...
+  Running setup.py bdist_wheel for numpy: finished with status 'done'
+  Stored in directory: /ihome/ece2166_2022s/iap20/.cache/pip/wheels/73/70/b5/557358663d5c8e7dcc61c63e487c005c0b3d1240d328500183
+  Running setup.py bdist_wheel for llvmlite: started
+  Running setup.py bdist_wheel for llvmlite: finished with status 'error'
+  Complete output from command /ihome/crc/install/python/miniconda3-3.7/bin/python -u -c "import setuptools, tokenize;__file__='/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/setup.py';f=getattr(tokenize, 'open', open)(__file__);code=f.read().replace('\r\n', '\n');f.close();exec(compile(code, __file__, 'exec'))" bdist_wheel -d /scratch/slurm-274102/pip-wheel-bh0945pd --python-tag cp37:
+  running bdist_wheel
+  /ihome/crc/install/python/miniconda3-3.7/bin/python /scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py
+  LLVM version... Traceback (most recent call last):
+    File "/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py", line 220, in <module>
+      main()
+    File "/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py", line 210, in main
+      main_posix('linux', '.so')
+    File "/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py", line 134, in main_posix
+      raise RuntimeError(msg) from None
+  RuntimeError: Could not find a `llvm-config` binary. There are a number of reasons this could occur, please see: https://llvmlite.readthedocs.io/en/latest/admin-guide/install.html#using-pip for help.
+  error: command '/ihome/crc/install/python/miniconda3-3.7/bin/python' failed with exit status 1
+  
+  ----------------------------------------
+  Failed building wheel for llvmlite
+  Running setup.py clean for llvmlite
+Successfully built numpy
+Failed to build llvmlite
+Installing collected packages: numpy, llvmlite, numba
+  Running setup.py install for llvmlite: started
+    Running setup.py install for llvmlite: finished with status 'error'
+    Complete output from command /ihome/crc/install/python/miniconda3-3.7/bin/python -u -c "import setuptools, tokenize;__file__='/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/setup.py';f=getattr(tokenize, 'open', open)(__file__);code=f.read().replace('\r\n', '\n');f.close();exec(compile(code, __file__, 'exec'))" install --record /scratch/slurm-274102/pip-record-xjy8fv2v/install-record.txt --single-version-externally-managed --compile --user --prefix=:
+    running install
+    running build
+    got version from file /scratch/slurm-274102/pip-install-krre0l7z/llvmlite/llvmlite/_version.py {'version': '0.38.0', 'full': 'f0365b91ce1e1f74c68785c6d0067f32f89857d9'}
+    running build_ext
+    /ihome/crc/install/python/miniconda3-3.7/bin/python /scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py
+    LLVM version... Traceback (most recent call last):
+      File "/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py", line 220, in <module>
+        main()
+      File "/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py", line 210, in main
+        main_posix('linux', '.so')
+      File "/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/ffi/build.py", line 134, in main_posix
+        raise RuntimeError(msg) from None
+    RuntimeError: Could not find a `llvm-config` binary. There are a number of reasons this could occur, please see: https://llvmlite.readthedocs.io/en/latest/admin-guide/install.html#using-pip for help.
+    error: command '/ihome/crc/install/python/miniconda3-3.7/bin/python' failed with exit status 1
+    
+    ----------------------------------------
+Command "/ihome/crc/install/python/miniconda3-3.7/bin/python -u -c "import setuptools, tokenize;__file__='/scratch/slurm-274102/pip-install-krre0l7z/llvmlite/setup.py';f=getattr(tokenize, 'open', open)(__file__);code=f.read().replace('\r\n', '\n');f.close();exec(compile(code, __file__, 'exec'))" install --record /scratch/slurm-274102/pip-record-xjy8fv2v/install-record.txt --single-version-externally-managed --compile --user --prefix=" failed with error code 1 in /scratch/slurm-274102/pip-install-krre0l7z/llvmlite/
+You are using pip version 18.0, however version 22.0.4 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
+Using downloaded and verified file: /ihome/ece2166_2022s/iap20/.medmnist/pathmnist.npz
+Using downloaded and verified file: /ihome/ece2166_2022s/iap20/.medmnist/pathmnist.npz
+Num GPUS: 2
